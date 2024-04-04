@@ -88,7 +88,7 @@ async def groups_sync(
             group_tasks[group] = group_task
 
         for instance in sql_instances:
-            users_task = asyncio.create_task(get_instance_users(user_service, instance, excluded_users))
+            users_task = asyncio.create_task(get_instance_users(user_service, instance))
             database_version_task = asyncio.create_task(
                 user_service.get_database_version(
                     InstanceConnectionName(*instance.split(":"))
@@ -111,6 +111,7 @@ async def groups_sync(
                         user_service,
                         credentials,
                         ip_type,
+                        excluded_users,
                     )
                 )
                 sync_tasks.append(sync_task)
@@ -133,6 +134,7 @@ async def sync_group(
     user_service,
     credentials,
     ip_type,
+    excluded_users,
 ):
     """
     Sync the IAM members of a single group to a single Cloud SQL instance.
@@ -192,6 +194,7 @@ async def sync_group(
                 users_with_roles_task,
                 group_task,
                 database_version,
+                excluded_users,
             )
         )
 
@@ -203,6 +206,7 @@ async def sync_group(
                 users_with_roles_task,
                 group_task,
                 database_version,
+                excluded_users,
             )
         )
         revoked_users, granted_users = await asyncio.gather(
@@ -446,6 +450,7 @@ async def revoke_iam_group_role(
     users_with_roles_future,
     iam_users_future,
     database_type,
+    excluded_users,
 ):
     """Revoke IAM group role from database users no longer in IAM group.
 
@@ -469,7 +474,7 @@ async def revoke_iam_group_role(
     users_to_revoke = [
         user_with_role
         for user_with_role in users_with_roles
-        if user_with_role not in iam_users
+        if user_with_role not in iam_users and user_with_role not in excluded_users
     ]
     # revoke group role from users no longer in IAM group
     await role_service.revoke_group_role(role, users_to_revoke)
@@ -483,6 +488,7 @@ async def grant_iam_group_role(
     users_with_roles_future,
     iam_users_future,
     database_type,
+    excluded_users,
 ):
     """Grant IAM group role to IAM database users missing it.
 
@@ -506,7 +512,7 @@ async def grant_iam_group_role(
         iam_users = [postgres_username(user) for user in iam_users]
 
     # find DB users who are part of IAM group that need role granted to them
-    users_to_grant = [user for user in iam_users if user not in users_with_roles]
+    users_to_grant = [user for user in iam_users if user not in users_with_roles and user not in excluded_users]
     await role_service.grant_group_role(role, users_to_grant)
 
     return users_to_grant

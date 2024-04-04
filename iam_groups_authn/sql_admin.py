@@ -33,7 +33,7 @@ class InstanceConnectionName(NamedTuple):
     instance: str
 
 
-async def get_instance_users(user_service, instance_connection_name, excluded_users):
+async def get_instance_users(user_service, instance_connection_name):
     """Get users that belong to a Cloud SQL instance.
 
     Given a Cloud SQL instance name and a Google Cloud project, get a list
@@ -53,8 +53,7 @@ async def get_instance_users(user_service, instance_connection_name, excluded_us
         InstanceConnectionName(*instance_connection_name.split(":"))
     )
     for user in users:
-        if user["name"] not in excluded_users:
-            db_users.append(user["name"])
+        db_users.append(user["name"])
     return db_users
 
 
