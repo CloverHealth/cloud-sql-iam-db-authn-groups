@@ -42,7 +42,7 @@ from iam_groups_authn.postgres import (
 
 
 async def groups_sync(
-    iam_groups, sql_instances, credentials, group_roles, private_ip=False
+    iam_groups, sql_instances, credentials, group_roles, private_ip=False, excluded_users=[]
 ):
     """GroupSync method to sync IAM groups with Cloud SQL instances.
 
@@ -66,6 +66,7 @@ async def groups_sync(
             )
         private_ip:(optional) Boolean flag for connecting to Cloud SQL databases with
             Private or Public IPs. (defaults to False for Public IP)
+        excluded_users:(optional) List of user name that would be excluded from the sync.
     """
     # set ip_type to proper type for connector
     ip_type = IPTypes.PRIVATE if private_ip else IPTypes.PUBLIC
@@ -87,7 +88,7 @@ async def groups_sync(
             group_tasks[group] = group_task
 
         for instance in sql_instances:
-            users_task = asyncio.create_task(get_instance_users(user_service, instance))
+            users_task = asyncio.create_task(get_instance_users(user_service, instance, excluded_users))
             database_version_task = asyncio.create_task(
                 user_service.get_database_version(
                     InstanceConnectionName(*instance.split(":"))

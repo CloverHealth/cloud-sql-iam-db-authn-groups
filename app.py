@@ -79,6 +79,13 @@ async def run_groups_authn():
             "Incorrect type for request parameter: `private_ip`, should be boolean.",
             400,
         )
+    # list of excluded users, default to empty list
+    excluded_users = body.get("excluded_users", [])
+    if type(excluded_users) is not list:
+        return (
+            "Incorrect type for `sql_instances`, should be list",
+            400,
+        )
 
     # optional param to change log level
     log_level = body.get("log_level", "INFO")
@@ -92,7 +99,7 @@ async def run_groups_authn():
 
     try:
         # sync IAM groups to Cloud SQL instances
-        await groups_sync(iam_groups, sql_instances, creds, group_roles, private_ip)
+        await groups_sync(iam_groups, sql_instances, creds, group_roles, private_ip, excluded_users)
     except GroupRoleMaxLengthError as e:
         logging.exception(f"Error during sync: {str(e)}")
         return (
